@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --app-nav-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  overscroll-behavior-y: none;
+  background: #f7f2e9;
+  color: #29231c;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+input,
+select,
+button,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/**
+ * Cook view runs one step up in size across the board: kitchen lighting, wet
+ * hands, phone propped on a counter at arm's length.
+ */
+.cook {
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.cook button,
+.cook a[role="button"] {
+  min-height: 48px;
+}
+
+/* Step text in full-screen cooking mode. */
+.cook-step {
+  font-size: 1.35rem;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
