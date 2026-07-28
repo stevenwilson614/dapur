@@ -19,7 +19,7 @@ Aturan bahasa:
 Aturan isi:
 - Pisahkan takaran dari nama bahan: qty ("2"), unit ("sdm"), item_id ("kecap manis").
 - Kalau tidak ada takaran, isi qty dan unit dengan null.
-- Langkah masak: kalimat pendek dan jelas, satu tindakan per langkah. Jangan menomori (nomor ditambahkan otomatis).
+- Langkah masak: isi text_id dengan KALIMAT langkahnya, bukan penomoran. Kalimat pendek dan jelas, satu tindakan per langkah. Jangan menomori (nomor ditambahkan otomatis).
 - Buang basa-basi blog, iklan, cerita pribadi, dan ajakan berlangganan.
 - total_minutes: perkiraan total waktu memasak dalam menit. Kalau tidak yakin, perkirakan wajar.
 - tags: 2-5 label pendek huruf kecil untuk memudahkan pencarian nanti (contoh: ayam, mie, pedas, cepat, makan-malam, vegetarian).
@@ -49,15 +49,18 @@ export const RECIPE_SCHEMA = {
         additionalProperties: false,
       },
     },
+    // Named text_id / text_en, NOT id / en: a field called "id" reads as
+    // "identifier" to a model, and it intermittently returned "step-1" instead
+    // of the step text. The stored shape stays {id, en} — normalize() maps back.
     steps: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          id: { type: "string" },
-          en: { type: ["string", "null"] },
+          text_id: { type: "string", description: "Langkah masak dalam bahasa Indonesia" },
+          text_en: { type: ["string", "null"], description: "Terjemahan Inggris, boleh null" },
         },
-        required: ["id", "en"],
+        required: ["text_id", "text_en"],
         additionalProperties: false,
       },
     },

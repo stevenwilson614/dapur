@@ -157,13 +157,16 @@ function normalize(raw: Record<string, unknown>): ImportedRecipe {
         }))
         .filter((row) => row.item_id)
       : [],
+    // Model returns text_id/text_en; the stored shape is {id, en}. Accept the
+    // old key too, and drop anything that is obviously a placeholder
+    // identifier ("step-1") rather than an actual instruction.
     steps: Array.isArray(raw.steps)
       ? raw.steps
         .map((row: Record<string, unknown>) => ({
-          id: (str(row?.id) ?? "").replace(/^\s*\d+[.)]\s*/, ""),
-          en: str(row?.en),
+          id: (str(row?.text_id) ?? str(row?.id) ?? "").replace(/^\s*\d+[.)]\s*/, ""),
+          en: str(row?.text_en) ?? str(row?.en),
         }))
-        .filter((row) => row.id)
+        .filter((row) => row.id && !/^(step|langkah)[-_\s]?\d+$/i.test(row.id))
       : [],
     tags: Array.isArray(raw.tags)
       ? raw.tags

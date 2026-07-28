@@ -23,6 +23,14 @@ export async function fetchPage(url: string): Promise<PageContent> {
     headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml" },
     redirect: "follow",
   });
+  // Some big recipe sites (Serious Eats, AllRecipes) block datacenter IPs
+  // outright. Nothing to fix server-side — so say the thing that actually
+  // works: copy the text and use Tempel.
+  if (res.status === 403 || res.status === 401 || res.status === 429) {
+    throw new Error(
+      "Situs ini memblokir akses otomatis. Salin teks resepnya lalu pakai tab “Tempel”.",
+    );
+  }
   if (!res.ok) throw new Error(`Tidak bisa membuka halaman (${res.status})`);
 
   const html = await res.text();
