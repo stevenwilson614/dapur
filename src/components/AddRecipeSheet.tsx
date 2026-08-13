@@ -5,6 +5,7 @@ import Icon, { IconName } from "@/components/ui/Icon";
 import RecipeReviewForm from "@/components/RecipeReviewForm";
 import { callFunction } from "@/lib/supabase";
 import { saveRecipe } from "@/lib/queries";
+import { fileToCompressedBase64 } from "@/lib/image";
 import {
   RecipeDraft,
   draftFromImport,
@@ -17,9 +18,9 @@ type Mode = "url" | "photo" | "paste" | "manual";
 
 const MODES: { key: Mode; label: string; icon: IconName }[] = [
   { key: "url", label: "Link", icon: "link" },
-  { key: "photo", label: "Foto", icon: "camera" },
-  { key: "paste", label: "Tempel", icon: "clipboard" },
-  { key: "manual", label: "Tulis", icon: "pencil" },
+  { key: "photo", label: "Photo", icon: "camera" },
+  { key: "paste", label: "Paste", icon: "clipboard" },
+  { key: "manual", label: "Write", icon: "pencil" },
 ];
 
 interface Props {
@@ -64,8 +65,8 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
       // Never a dead end: fall through to the editor with whatever we have.
       setError(
         err instanceof Error
-          ? `${err.message} — silakan lengkapi sendiri di bawah.`
-          : "Gagal membaca resep — silakan lengkapi sendiri."
+          ? `${err.message} — fill in the rest below.`
+          : "Couldn't read the recipe — fill it in below."
       );
       setDraft({
         ...emptyDraft(),
@@ -77,14 +78,14 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
   }
 
   async function handlePhoto(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
-      const base64 = dataUrl.split(",")[1];
-      const mediaType = dataUrl.slice(5, dataUrl.indexOf(";"));
-      runImport({ image: base64, media_type: mediaType });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const { image, media_type } = await fileToCompressedBase64(file);
+      await runImport({ image, media_type });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that photo.");
+      setDraft(emptyDraft());
+      setStage("review");
+    }
   }
 
   async function save() {
@@ -96,7 +97,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
       onSaved(recipe);
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan");
+      setError(err instanceof Error ? err.message : "Couldn't save");
     } finally {
       setBusy(false);
     }
@@ -106,16 +107,16 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
     <Sheet
       open={open}
       onClose={close}
-      title={stage === "review" ? "Periksa resep" : "Resep baru"}
+      title={stage === "review" ? "Check the recipe" : "New recipe"}
       subtitle={
         stage === "review"
-          ? "Sudah diterjemahkan ke bahasa Indonesia. Perbaiki yang perlu."
+          ? "Translated for you and for the cook. Fix anything that's off."
           : undefined
       }
       footer={
         stage === "review" ? (
           <Button full onClick={save} disabled={busy}>
-            {busy ? "Menyimpan…" : "Simpan resep"}
+            {busy ? "Saving…" : "Save recipe"}
           </Button>
         ) : undefined
       }
@@ -123,7 +124,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
       {stage === "loading" && (
         <div className="flex flex-col items-center gap-3 py-16 text-ink-muted">
           <Icon name="pot" size={30} className="animate-pulse" />
-          <p>Membaca resep…</p>
+          <p>Reading the recipe…</p>
         </div>
       )}
 
@@ -154,10 +155,10 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 className="w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-3 outline-none focus:border-clay"
               />
               <Button full disabled={!url.trim()} onClick={() => runImport({ url: url.trim() })}>
-                Ambil resep
+                Get recipe
               </Button>
               <p className="text-sm text-ink-muted">
-                Dari blog masak, Cookpad, atau situs resep lain.
+                From a food blog, Cookpad, or another recipe site.
               </p>
             </div>
           )}
@@ -166,7 +167,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
             <div className="space-y-3">
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-paper-line bg-paper-surface px-4 py-10 text-ink-muted">
                 <Icon name="camera" size={26} />
-                <span className="text-sm">Ambil foto atau pilih dari galeri</span>
+                <span className="text-sm">Take a photo or pick from the gallery</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -178,7 +179,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 />
               </label>
               <p className="text-sm text-ink-muted">
-                Halaman buku masak, tulisan tangan, atau screenshot.
+                Cookbook page, handwriting, or a screenshot.
               </p>
             </div>
           )}
@@ -189,7 +190,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 value={pasted}
                 onChange={(e) => setPasted(e.target.value)}
                 rows={9}
-                placeholder="Tempel resep dari WhatsApp di sini…"
+                placeholder="Paste a WhatsApp recipe here…"
                 className="w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-3 outline-none focus:border-clay"
               />
               <Button
@@ -197,14 +198,14 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 disabled={!pasted.trim()}
                 onClick={() => runImport({ text: pasted.trim() })}
               >
-                Rapikan resep
+                Clean up recipe
               </Button>
             </div>
           )}
 
           {mode === "manual" && (
             <div className="space-y-3">
-              <p className="text-sm text-ink-muted">Tulis resep sendiri dari awal.</p>
+              <p className="text-sm text-ink-muted">Write it yourself from scratch.</p>
               <Button
                 full
                 onClick={() => {
@@ -212,7 +213,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                   setStage("review");
                 }}
               >
-                Mulai menulis
+                Start writing
               </Button>
             </div>
           )}

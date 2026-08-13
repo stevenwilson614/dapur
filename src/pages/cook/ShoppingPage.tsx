@@ -98,7 +98,7 @@ export default function ShoppingPage() {
     }
   }
 
-  if (loading || !household) return <Spinner />;
+  if (loading || !household) return <Spinner label="sebentar…" />;
 
   const lines = buildShoppingList(meals);
   const remaining = lines.filter((l) => !checked.has(l.norm_key)).length + extras.filter((e) => !e.checked).length;

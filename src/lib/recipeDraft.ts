@@ -2,13 +2,15 @@ import { normalizeKey } from "@/lib/shopping";
 import type { Ingredient, ImportedRecipe, Recipe, Step } from "@/lib/types";
 
 /**
- * The editable shape used by the review form. Ingredients keep amount and name
- * as two plain fields — the split into qty/unit is a detail the form shouldn't
- * make Olivia think about, so it happens on the way in and out.
+ * The editable shape used by the review form. Olivia edits English; Indonesian
+ * for the cook is kept alongside so a translation from import isn't overwritten.
  */
 export interface DraftIngredient {
   amount: string;
+  /** What Olivia sees and edits — English when we have it. */
   name: string;
+  /** Indonesian name for the cook. Empty on a manual English-only entry. */
+  name_id: string;
   note?: string;
 }
 
@@ -18,7 +20,10 @@ export interface RecipeDraft {
   servings: string;
   total_minutes: string;
   ingredients: DraftIngredient[];
+  /** Olivia's steps — English when we have it. */
   stepsText: string;
+  /** Indonesian steps for the cook. */
+  stepsTextId: string;
   tags: string[];
   standing_notes: string;
   hero_image_url: string | null;
@@ -31,8 +36,9 @@ export function emptyDraft(): RecipeDraft {
     title_en: "",
     servings: "",
     total_minutes: "",
-    ingredients: [{ amount: "", name: "" }],
+    ingredients: [{ amount: "", name: "", name_id: "" }],
     stepsText: "",
+    stepsTextId: "",
     tags: [],
     standing_notes: "",
     hero_image_url: null,
@@ -48,10 +54,12 @@ export function draftFromImport(imported: ImportedRecipe): RecipeDraft {
     total_minutes: imported.total_minutes ? String(imported.total_minutes) : "",
     ingredients: (imported.ingredients ?? []).map((ing) => ({
       amount: [ing.qty, ing.unit].filter(Boolean).join(" ").trim(),
-      name: ing.item_id,
+      name: ing.item_en?.trim() || ing.item_id,
+      name_id: ing.item_id,
       note: ing.note ?? undefined,
     })),
-    stepsText: (imported.steps ?? []).map((s) => s.id).join("\n"),
+    stepsText: (imported.steps ?? []).map((s) => s.en?.trim() || s.id).join("\n"),
+    stepsTextId: (imported.steps ?? []).map((s) => s.id).join("\n"),
     tags: imported.tags ?? [],
     standing_notes: imported.notes ?? "",
     hero_image_url: imported.hero_image_url ?? null,
@@ -67,10 +75,12 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
     total_minutes: recipe.total_minutes ? String(recipe.total_minutes) : "",
     ingredients: (recipe.ingredients ?? []).map((ing) => ({
       amount: [ing.qty, ing.unit].filter(Boolean).join(" ").trim(),
-      name: ing.item_id,
+      name: ing.item_en?.trim() || ing.item_id,
+      name_id: ing.item_id,
       note: ing.note ?? undefined,
     })),
-    stepsText: (recipe.steps ?? []).map((s) => s.id).join("\n"),
+    stepsText: (recipe.steps ?? []).map((s) => s.en?.trim() || s.id).join("\n"),
+    stepsTextId: (recipe.steps ?? []).map((s) => s.id).join("\n"),
     tags: recipe.tags ?? [],
     standing_notes: recipe.standing_notes ?? "",
     hero_image_url: recipe.hero_image_url,
@@ -78,7 +88,7 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
   };
 }
 
-/** "2 sdm" -> { qty: "2", unit: "sdm" }; "secukupnya" -> { unit: "secukupnya" }. */
+/** "2 tbsp" -> { qty: "2", unit: "tbsp" }; "to taste" -> { unit: "to taste" }. */
 function splitAmount(amount: string): { qty: string | null; unit: string | null } {
   const trimmed = amount.trim();
   if (!trimmed) return { qty: null, unit: null };
@@ -90,34 +100,56 @@ function splitAmount(amount: string): { qty: string | null; unit: string | null 
 
 export function draftToIngredients(draft: RecipeDraft): Ingredient[] {
   return draft.ingredients
-    .filter((row) => row.name.trim())
+    .filter((row) => row.name.trim() || row.name_id.trim())
     .map((row) => {
       const { qty, unit } = splitAmount(row.amount);
       const name = row.name.trim();
+      const nameId = row.name_id.trim();
+      const item_id = nameId || name;
+      const item_en = name && name !== item_id ? name : nameId ? null : name || null;
       return {
         qty,
         unit,
-        item_id: name,
-        item_en: null,
+        item_id,
+        item_en,
         note: row.note?.trim() || null,
-        norm_key: normalizeKey(name),
+        norm_key: normalizeKey(item_id),
       };
     });
 }
 
-export function draftToSteps(draft: RecipeDraft): Step[] {
-  return draft.stepsText
+function splitLines(text: string): string[] {
+  return text
     .split("\n")
     .map((line) => line.replace(/^\s*\d+[.)]\s*/, "").trim())
-    .filter(Boolean)
-    .map((line) => ({ id: line, en: null }));
+    .filter(Boolean);
+}
+
+export function draftToSteps(draft: RecipeDraft): Step[] {
+  const enLines = splitLines(draft.stepsText);
+  const idLines = splitLines(draft.stepsTextId);
+  const count = Math.max(enLines.length, idLines.length);
+  const steps: Step[] = [];
+  for (let i = 0; i < count; i++) {
+    const en = enLines[i] ?? "";
+    const id = idLines[i] ?? "";
+    const cook = id || en;
+    if (!cook) continue;
+    steps.push({
+      id: cook,
+      en: en && en !== cook ? en : id ? null : en || null,
+    });
+  }
+  return steps;
 }
 
 export function draftToRecipe(draft: RecipeDraft, householdId: string, sourceType: Recipe["source_type"]) {
+  const titleEn = draft.title_en.trim();
+  const titleId = draft.title_id.trim() || titleEn || "Untitled recipe";
   return {
     household_id: householdId,
-    title_id: draft.title_id.trim() || "Resep tanpa judul",
-    title_en: draft.title_en.trim() || null,
+    title_id: titleId,
+    title_en: titleEn || null,
     source_type: sourceType,
     source_url: draft.source_url,
     hero_image_url: draft.hero_image_url,

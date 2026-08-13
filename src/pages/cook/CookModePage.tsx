@@ -4,6 +4,7 @@ import { fetchMeal } from "@/lib/queries";
 import { formatMinutes } from "@/lib/dates";
 import type { Meal, Recipe } from "@/lib/types";
 import Icon from "@/components/ui/Icon";
+import ViewToggle from "@/components/ViewToggle";
 import { Spinner } from "@/App";
 
 /**
@@ -59,6 +60,7 @@ export default function CookModePage() {
   if (error) {
     return (
       <div className="cook flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+        <ViewToggle />
         <p className="text-ink-muted">{error}</p>
         <button onClick={() => navigate("/masak")} className="text-clay underline underline-offset-4">
           Kembali
@@ -82,6 +84,7 @@ export default function CookModePage() {
 
   return (
     <div className="cook mx-auto min-h-screen w-full max-w-[520px] bg-paper-bg pb-16">
+      <ViewToggle />
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-paper-border bg-paper-bg/95 px-3 py-3 backdrop-blur">
         <button
           onClick={() => navigate("/masak")}

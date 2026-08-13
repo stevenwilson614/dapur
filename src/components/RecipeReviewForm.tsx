@@ -22,7 +22,7 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
   }
 
   function addIngredient() {
-    set({ ingredients: [...draft.ingredients, { amount: "", name: "" }] });
+    set({ ingredients: [...draft.ingredients, { amount: "", name: "", name_id: "" }] });
   }
 
   function removeIngredient(index: number) {
@@ -47,18 +47,28 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
       )}
 
       <div>
-        <label className={LABEL}>Judul</label>
+        <label className={LABEL}>Title</label>
+        <input
+          value={draft.title_en}
+          onChange={(e) => set({ title_en: e.target.value })}
+          className={`${FIELD} font-display text-lg`}
+          placeholder={draft.title_id || "Chicken noodle soup"}
+        />
+      </div>
+
+      <div>
+        <label className={LABEL}>Indonesian title (cook)</label>
         <input
           value={draft.title_id}
           onChange={(e) => set({ title_id: e.target.value })}
-          className={`${FIELD} font-display text-lg`}
+          className={FIELD}
           placeholder="Mie ayam"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={LABEL}>Waktu (menit)</label>
+          <label className={LABEL}>Time (min)</label>
           <input
             inputMode="numeric"
             value={draft.total_minutes}
@@ -68,7 +78,7 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
           />
         </div>
         <div>
-          <label className={LABEL}>Porsi</label>
+          <label className={LABEL}>Servings</label>
           <input
             inputMode="numeric"
             value={draft.servings}
@@ -80,7 +90,7 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
       </div>
 
       <div>
-        <label className={LABEL}>Bahan</label>
+        <label className={LABEL}>Ingredients</label>
         <div className="space-y-2">
           {draft.ingredients.map((row, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -88,18 +98,18 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
                 value={row.amount}
                 onChange={(e) => setIngredient(i, { amount: e.target.value })}
                 className={`${FIELD} w-24 shrink-0 text-center`}
-                placeholder="2 sdm"
+                placeholder="2 tbsp"
               />
               <input
                 value={row.name}
                 onChange={(e) => setIngredient(i, { name: e.target.value })}
                 className={FIELD}
-                placeholder="kecap manis"
+                placeholder="sweet soy sauce"
               />
               <button
                 type="button"
                 onClick={() => removeIngredient(i)}
-                aria-label="Hapus bahan"
+                aria-label="Remove ingredient"
                 className="shrink-0 rounded-full p-2 text-ink-faint hover:bg-paper-sunk hover:text-clay-deep"
               >
                 <Icon name="x" size={18} />
@@ -112,37 +122,40 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
           onClick={addIngredient}
           className="mt-2 inline-flex items-center gap-1.5 text-sm text-clay"
         >
-          <Icon name="plus" size={16} /> Tambah bahan
+          <Icon name="plus" size={16} /> Add ingredient
         </button>
       </div>
 
       <div>
-        <label className={LABEL}>Cara masak — satu langkah per baris</label>
+        <label className={LABEL}>Steps — one per line</label>
         <textarea
           value={draft.stepsText}
           onChange={(e) => set({ stepsText: e.target.value })}
           rows={7}
           className={`${FIELD} leading-relaxed`}
-          placeholder={"Rebus mie sampai matang.\nTumis bawang putih…"}
+          placeholder={"Boil the noodles until cooked.\nSauté the garlic…"}
         />
+        <p className="mt-1.5 text-[0.8rem] text-ink-muted">
+          The cook still sees the Indonesian version from import.
+        </p>
       </div>
 
       <div>
-        <label className={LABEL}>Catatan tetap</label>
+        <label className={LABEL}>Standing notes</label>
         <textarea
           value={draft.standing_notes}
           onChange={(e) => set({ standing_notes: e.target.value })}
           rows={2}
           className={FIELD}
-          placeholder="Selalu setengah cabai saja"
+          placeholder="Always half the chili"
         />
         <p className="mt-1.5 text-[0.8rem] text-ink-muted">
-          Muncul setiap kali resep ini dimasak.
+          Shown every time this recipe is cooked.
         </p>
       </div>
 
       <div>
-        <label className={LABEL}>Label</label>
+        <label className={LABEL}>Tags</label>
         <div className="mb-2 flex flex-wrap gap-1.5">
           {draft.tags.map((tag) => (
             <button
@@ -167,14 +180,14 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
               }
             }}
             className={FIELD}
-            placeholder="ayam, mie, cepat…"
+            placeholder="chicken, noodles, quick…"
           />
           <button
             type="button"
             onClick={addTag}
             className="shrink-0 rounded-xl bg-paper-sunk px-4 text-sm text-ink"
           >
-            Tambah
+            Add
           </button>
         </div>
       </div>

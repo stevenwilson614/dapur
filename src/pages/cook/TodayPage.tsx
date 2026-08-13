@@ -64,7 +64,7 @@ export default function TodayPage() {
     }
   }
 
-  if (loading || !household) return <Spinner />;
+  if (loading || !household) return <Spinner label="sebentar…" />;
 
   const slotRank = (m: Meal) => SLOT_ORDER.indexOf(m.slot);
   const sorted = [...meals].sort((a, b) => slotRank(a) - slotRank(b) || a.position - b.position);

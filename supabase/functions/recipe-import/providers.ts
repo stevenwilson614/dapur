@@ -63,7 +63,11 @@ export async function structureFromImage(
 
 async function claudeStructure(content: unknown[]): Promise<ImportedRecipe> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY belum diatur");
+  if (!apiKey) {
+    throw new Error(
+      "Photo import needs an Anthropic API key on the server. Use Link or Paste for now.",
+    );
+  }
 
   const client = new Anthropic({ apiKey });
 
@@ -82,11 +86,11 @@ async function claudeStructure(content: unknown[]): Promise<ImportedRecipe> {
   } as never);
 
   if (response.stop_reason === "refusal") {
-    throw new Error("Model menolak membaca sumber ini");
+    throw new Error("The model refused to read this source");
   }
 
   const block = response.content.find((b: { type: string }) => b.type === "text");
-  if (!block) throw new Error("Model tidak mengembalikan hasil");
+  if (!block) throw new Error("The model didn't return a result");
   return normalize(JSON.parse((block as { text: string }).text));
 }
 
@@ -94,38 +98,51 @@ async function claudeStructure(content: unknown[]): Promise<ImportedRecipe> {
 
 async function deepseekStructure(prompt: string): Promise<ImportedRecipe> {
   const apiKey = Deno.env.get("DEEPSEEK_API_KEY");
-  if (!apiKey) throw new Error("DEEPSEEK_API_KEY belum diatur");
+  if (!apiKey) throw new Error("DEEPSEEK_API_KEY is not set on the server");
 
-  const res = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: DEEPSEEK_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `${SYSTEM_PROMPT}\n\nBalas HANYA dengan JSON yang cocok dengan skema ini:\n${
-            JSON.stringify(RECIPE_SCHEMA)
-          }`,
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 8000,
-    }),
-  });
+  const models = [DEEPSEEK_MODEL, "deepseek-chat"].filter(
+    (m, i, arr) => m && arr.indexOf(m) === i,
+  );
+  let lastError = "DeepSeek didn't return a result";
 
-  if (!res.ok) {
-    throw new Error(`DeepSeek gagal (${res.status}): ${(await res.text()).slice(0, 200)}`);
+  for (const model of models) {
+    const res = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content: `${SYSTEM_PROMPT}\n\nReply ONLY with JSON that matches this schema:\n${
+              JSON.stringify(RECIPE_SCHEMA)
+            }`,
+          },
+          { role: "user", content: prompt },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 8000,
+      }),
+    });
+
+    if (!res.ok) {
+      lastError = `DeepSeek failed (${res.status}): ${(await res.text()).slice(0, 200)}`;
+      continue;
+    }
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      lastError = "DeepSeek didn't return a result";
+      continue;
+    }
+    return normalize(JSON.parse(content));
   }
 
-  const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("DeepSeek tidak mengembalikan hasil");
-  return normalize(JSON.parse(content));
+  throw new Error(lastError);
 }
 
 // ---------------------------------------------------------------- normalize
@@ -142,7 +159,7 @@ function normalize(raw: Record<string, unknown>): ImportedRecipe {
   };
 
   return {
-    title_id: str(raw.title_id) ?? "Resep tanpa judul",
+    title_id: str(raw.title_id) ?? "Untitled recipe",
     title_en: str(raw.title_en),
     servings: num(raw.servings),
     total_minutes: num(raw.total_minutes),

@@ -6,8 +6,9 @@ import AddRecipeSheet from "@/components/AddRecipeSheet";
 import CookPreview from "@/components/CookPreview";
 import { attachRecipe, deleteMeal, detachRecipe, fetchMeal, fetchRecipes, updateMeal } from "@/lib/queries";
 import { formatMinutes, longDate } from "@/lib/dates";
-import { SLOT_LABEL } from "@/lib/types";
+import { SLOT_LABEL_EN } from "@/lib/types";
 import type { Meal, Recipe } from "@/lib/types";
+import { recipeTitle } from "@/lib/display";
 
 interface Props {
   meal: Meal;
@@ -87,7 +88,13 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
     const taken = new Set(meal.recipes.map((r) => r.recipe_id));
     return library
       .filter((r) => !taken.has(r.id))
-      .filter((r) => !q || r.title_id.toLowerCase().includes(q) || r.tags.some((t) => t.includes(q)));
+      .filter(
+        (r) =>
+          !q ||
+          recipeTitle(r).toLowerCase().includes(q) ||
+          r.title_id.toLowerCase().includes(q) ||
+          r.tags.some((t) => t.includes(q))
+      );
   }, [library, search, meal.recipes]);
 
   if (previewing) {
@@ -95,8 +102,8 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
       <Sheet
         open={open}
         onClose={() => setPreviewing(false)}
-        title="Tampilan yang memasak"
-        subtitle="Persis seperti ini yang dia lihat."
+        title="Nias's view"
+        subtitle="Exactly what she'll see."
       >
         <CookPreview meal={{ ...meal, notes_today: notes.trim() || null, title: title.trim() || null }} />
       </Sheet>
@@ -108,16 +115,16 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
       <Sheet
         open={open && !addingNew}
         onClose={saveAndClose}
-        title={SLOT_LABEL[meal.slot]}
-        subtitle={longDate(meal.date)}
+        title={SLOT_LABEL_EN[meal.slot]}
+        subtitle={longDate(meal.date, "en")}
         footer={
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setPreviewing(true)}>
               <Icon name="eye" size={18} />
-              Pratinjau
+              Preview
             </Button>
             <Button full onClick={saveAndClose} disabled={saving}>
-              {saving ? "Menyimpan…" : "Simpan"}
+              {saving ? "Saving…" : "Save"}
             </Button>
           </div>
         }
@@ -125,12 +132,12 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
         <div className="space-y-6">
           <div>
             <label className="mb-1.5 block text-[0.78rem] font-medium uppercase tracking-wide text-ink-muted">
-              Nama menu <span className="normal-case tracking-normal">(opsional)</span>
+              Menu name <span className="normal-case tracking-normal">(optional)</span>
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={meal.recipes.map((r) => r.recipe.title_id).join(" + ") || "Mie ayam + sambal"}
+              placeholder={meal.recipes.map((r) => recipeTitle(r.recipe)).join(" + ") || "Chicken noodles + sambal"}
               className="w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-2.5 font-display text-lg outline-none focus:border-clay"
             />
           </div>
@@ -138,10 +145,10 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[0.78rem] font-medium uppercase tracking-wide text-ink-muted">
-                Resep
+                Recipes
               </span>
               <span className="text-[0.78rem] text-ink-faint">
-                {meal.recipes.length ? `${meal.recipes.length} resep` : "belum ada"}
+                {meal.recipes.length ? `${meal.recipes.length} recipes` : "none yet"}
               </span>
             </div>
 
@@ -165,17 +172,17 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
 
                   <div className="min-w-0 flex-1">
                     <p className="font-display text-[1.05rem] leading-snug text-ink">
-                      {mr.recipe.title_id}
+                      {recipeTitle(mr.recipe)}
                     </p>
                     <p className="mt-0.5 text-sm text-ink-muted">
-                      {formatMinutes(mr.recipe.total_minutes) ?? "waktu belum diisi"}
+                      {formatMinutes(mr.recipe.total_minutes, "en") ?? "time not set"}
                       {mr.recipe.ingredients?.length
-                        ? ` · ${mr.recipe.ingredients.length} bahan`
+                        ? ` · ${mr.recipe.ingredients.length} ingredients`
                         : ""}
                     </p>
                     {mr.recipe.standing_notes && (
                       <p className="mt-2 rounded-lg bg-paper-sunk px-2.5 py-1.5 text-[0.85rem] text-ink-muted">
-                        <span className="font-medium text-ink">Catatan tetap:</span>{" "}
+                        <span className="font-medium text-ink">Standing note:</span>{" "}
                         {mr.recipe.standing_notes}
                       </p>
                     )}
@@ -183,7 +190,7 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
 
                   <button
                     onClick={() => removeRecipe(mr.id)}
-                    aria-label="Keluarkan resep"
+                    aria-label="Remove recipe"
                     className="shrink-0 rounded-full p-2 text-ink-faint hover:bg-paper-sunk hover:text-clay-deep"
                   >
                     <Icon name="x" size={18} />
@@ -196,23 +203,23 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
               onClick={openPicker}
               className="mt-2 inline-flex items-center gap-1.5 text-sm text-clay"
             >
-              <Icon name="plus" size={16} /> Tambah resep
+              <Icon name="plus" size={16} /> Add recipe
             </button>
           </div>
 
           <div>
             <label className="mb-1.5 block text-[0.78rem] font-medium uppercase tracking-wide text-ink-muted">
-              Catatan hari ini
+              Notes for today
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Ada tamu, buat 6 porsi"
+              placeholder="Guests tonight — make 6 servings"
               className="w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-2.5 outline-none focus:border-clay"
             />
             <p className="mt-1.5 text-[0.8rem] text-ink-muted">
-              Hanya untuk hari ini. Untuk yang selalu berlaku, tulis di catatan tetap resep.
+              Only for today. Standing notes live on the recipe.
             </p>
           </div>
 
@@ -220,20 +227,20 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
             onClick={remove}
             className="inline-flex items-center gap-1.5 text-sm text-clay-deep"
           >
-            <Icon name="trash" size={16} /> Hapus menu ini
+            <Icon name="trash" size={16} /> Delete this meal
           </button>
         </div>
       </Sheet>
 
       {/* Recipe picker */}
-      <Sheet open={picking} onClose={() => setPicking(false)} title="Pilih resep">
+      <Sheet open={picking} onClose={() => setPicking(false)} title="Pick a recipe">
         <div className="space-y-3">
           <div className="flex items-center gap-2 rounded-xl border border-paper-border bg-paper-surface px-3">
             <Icon name="search" size={18} className="text-ink-faint" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari di koleksi…"
+              placeholder="Search the library…"
               className="w-full bg-transparent py-2.5 outline-none"
             />
           </div>
@@ -246,7 +253,7 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
               setAddingNew(true);
             }}
           >
-            <Icon name="plus" size={18} /> Resep baru
+            <Icon name="plus" size={18} /> New recipe
           </Button>
 
           <div className="space-y-1.5 pt-1">
@@ -264,17 +271,17 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-ink">{recipe.title_id}</p>
+                  <p className="truncate text-ink">{recipeTitle(recipe)}</p>
                   <p className="text-sm text-ink-muted">
-                    {formatMinutes(recipe.total_minutes) ?? "—"}
-                    {recipe.verdict === "keeper" ? " · disimpan" : ""}
+                    {formatMinutes(recipe.total_minutes, "en") ?? "—"}
+                    {recipe.verdict === "keeper" ? " · keeper" : ""}
                   </p>
                 </div>
               </button>
             ))}
             {!filtered.length && (
               <p className="py-6 text-center text-sm text-ink-muted">
-                {library.length ? "Tidak ada yang cocok." : "Koleksi masih kosong."}
+                {library.length ? "Nothing matches." : "Library is empty."}
               </p>
             )}
           </div>

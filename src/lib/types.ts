@@ -5,11 +5,19 @@ export type Role = "planner" | "cook";
 
 export const SLOT_ORDER: Slot[] = ["sarapan", "makan_siang", "makan_malam", "camilan"];
 
+/** Cook-facing slot names. Planner UI uses SLOT_LABEL_EN. */
 export const SLOT_LABEL: Record<Slot, string> = {
   sarapan: "Sarapan",
   makan_siang: "Makan siang",
   makan_malam: "Makan malam",
   camilan: "Camilan",
+};
+
+export const SLOT_LABEL_EN: Record<Slot, string> = {
+  sarapan: "Breakfast",
+  makan_siang: "Lunch",
+  makan_malam: "Dinner",
+  camilan: "Snack",
 };
 
 /** For the narrow column on the week grid — "Makan siang" and "Makan malam"
@@ -19,6 +27,13 @@ export const SLOT_SHORT: Record<Slot, string> = {
   makan_siang: "Siang",
   makan_malam: "Malam",
   camilan: "Camilan",
+};
+
+export const SLOT_SHORT_EN: Record<Slot, string> = {
+  sarapan: "AM",
+  makan_siang: "Lunch",
+  makan_malam: "Dinner",
+  camilan: "Snack",
 };
 
 export interface Ingredient {
@@ -40,8 +55,6 @@ export interface Step {
 export interface Household {
   id: string;
   name: string;
-  link_token: string;
-  cook_pin_hash: string | null;
   slots: Slot[];
   default_servings: number;
   show_read_receipt: boolean;

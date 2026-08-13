@@ -29,27 +29,28 @@ function json(body: unknown, status = 200) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (req.method !== "POST") return json({ error: "POST saja" }, 405);
-
-  // Must be a signed-in member of some household — planner or cook.
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return json({ error: "Belum masuk" }, 401);
-
-  let payload: { url?: string; text?: string; image?: string; media_type?: string };
   try {
-    payload = await req.json();
-  } catch {
-    return json({ error: "Body bukan JSON" }, 400);
-  }
+    if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  try {
+    // Must be a signed-in member of some household — planner or cook.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) return json({ error: "Couldn't verify sign-in" }, 401);
+    if (!user) return json({ error: "Sign in first" }, 401);
+
+    let payload: { url?: string; text?: string; image?: string; media_type?: string };
+    try {
+      payload = await req.json();
+    } catch {
+      return json({ error: "Body isn't JSON" }, 400);
+    }
+
     let recipe: ImportedRecipe;
     let heroImage: string | null = null;
     let sourceUrl: string | null = null;
@@ -57,26 +58,26 @@ Deno.serve(async (req) => {
     if (payload.image) {
       const mediaType = payload.media_type ?? "image/jpeg";
       if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) {
-        return json({ error: "Format gambar tidak didukung" }, 400);
+        return json({ error: "That image format isn't supported" }, 400);
       }
       // base64 inflates by ~4/3; guard before handing it to the model.
       if (payload.image.length * 0.75 > MAX_IMAGE_BYTES) {
-        return json({ error: "Gambar terlalu besar (maksimal 6MB)" }, 400);
+        return json({ error: "Photo is too large (max 6MB). Try a closer crop." }, 400);
       }
       recipe = await structureFromImage(payload.image, mediaType);
     } else if (payload.url) {
       const url = safeUrl(payload.url);
-      if (!url) return json({ error: "Link tidak valid" }, 400);
+      if (!url) return json({ error: "That link isn't valid" }, 400);
       sourceUrl = url;
       const page = await fetchPage(url);
       heroImage = page.heroImage;
       recipe = await structureFromText(page.text, url);
     } else if (payload.text) {
       const text = payload.text.slice(0, 200_000).trim();
-      if (!text) return json({ error: "Teks kosong" }, 400);
+      if (!text) return json({ error: "Text is empty" }, 400);
       recipe = await structureFromText(text);
     } else {
-      return json({ error: "Butuh url, text, atau image" }, 400);
+      return json({ error: "Need a url, text, or image" }, 400);
     }
 
     // Store the hero image so the recipe survives the source rotting or
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
       source_url: sourceUrl,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Gagal membaca resep";
+    const message = err instanceof Error ? err.message : "Couldn't read that recipe";
     console.error("recipe-import failed:", message);
     return json({ error: message }, 502);
   }

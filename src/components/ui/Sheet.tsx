@@ -35,7 +35,7 @@ export default function Sheet({ open, onClose, title, subtitle, children, footer
           </div>
           <button
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label="Close"
             className="-mr-1 -mt-1 rounded-full p-2 text-ink-muted transition hover:bg-paper-sunk"
           >
             <Icon name="x" />

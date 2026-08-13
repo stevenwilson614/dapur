@@ -29,8 +29,8 @@ export async function callFunction<T>(name: string, body: unknown): Promise<T> {
   }
 
   if (!res.ok) {
-    const message = (payload as { error?: string })?.error;
-    throw new Error(message || `${name} failed (${res.status})`);
+    const p = payload as { error?: string; msg?: string };
+    throw new Error(p.error || p.msg || `${name} failed (${res.status})`);
   }
   return payload as T;
 }

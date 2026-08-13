@@ -3,20 +3,21 @@ import { HashRouter, Routes, Route, Navigate, Outlet, NavLink, useNavigate } fro
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { HouseholdProvider, useHousehold } from "@/context/HouseholdContext";
+import { ViewProvider, useView } from "@/context/ViewContext";
 import Icon, { IconName } from "@/components/ui/Icon";
+import ViewToggle from "@/components/ViewToggle";
 
-import LoginPage from "@/pages/LoginPage";
+import WhoLoginPage from "@/pages/WhoLoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import WeekPage from "@/pages/WeekPage";
 import LibraryPage from "@/pages/LibraryPage";
 import SettingsPage from "@/pages/SettingsPage";
 
-import CookLoginPage from "@/pages/cook/CookLoginPage";
 import TodayPage from "@/pages/cook/TodayPage";
 import ShoppingPage from "@/pages/cook/ShoppingPage";
 import CookModePage from "@/pages/cook/CookModePage";
 
-export function Spinner({ label = "sebentar…" }: { label?: string }) {
+export function Spinner({ label = "just a moment…" }: { label?: string }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <span className="text-sm text-ink-muted">{label}</span>
@@ -25,9 +26,9 @@ export function Spinner({ label = "sebentar…" }: { label?: string }) {
 }
 
 const PLANNER_NAV: { to: string; label: string; icon: IconName }[] = [
-  { to: "/minggu", label: "Minggu", icon: "calendar" },
-  { to: "/koleksi", label: "Koleksi", icon: "book" },
-  { to: "/pengaturan", label: "Atur", icon: "settings" },
+  { to: "/minggu", label: "Week", icon: "calendar" },
+  { to: "/koleksi", label: "Library", icon: "book" },
+  { to: "/pengaturan", label: "Settings", icon: "settings" },
 ];
 
 const COOK_NAV: { to: string; label: string; icon: IconName }[] = [
@@ -72,6 +73,7 @@ function PlannerShell() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[520px] flex-col bg-paper-bg">
+      <ViewToggle />
       <main className="flex-1">
         <Outlet />
       </main>
@@ -87,6 +89,7 @@ function PlannerShell() {
 function CookShell() {
   return (
     <div className="cook mx-auto flex min-h-screen w-full max-w-[520px] flex-col bg-paper-bg">
+      <ViewToggle />
       <main className="flex-1">
         <Outlet />
       </main>
@@ -96,7 +99,7 @@ function CookShell() {
 }
 
 function PlannerGuard({ session }: { session: Session | null }) {
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) return <Navigate to="/masuk" replace />;
   return (
     <HouseholdProvider>
       <PlannerShell />
@@ -105,10 +108,28 @@ function PlannerGuard({ session }: { session: Session | null }) {
 }
 
 function CookGuard({ session }: { session: Session | null }) {
-  if (!session) return <Navigate to="/masak/masuk" replace />;
+  if (!session) return <Navigate to="/masuk" replace />;
   return (
     <HouseholdProvider>
       <CookShell />
+    </HouseholdProvider>
+  );
+}
+
+/** Where an already-signed-in visit to "/" or "/masuk" should land, by role. */
+function RoleRedirect() {
+  const { role, loading, needsOnboarding } = useHousehold();
+  const { niasView } = useView();
+  if (loading) return <Spinner />;
+  if (needsOnboarding) return <Navigate to="/onboard" replace />;
+  if (role === "cook") return <Navigate to="/masak" replace />;
+  return <Navigate to={niasView ? "/masak" : "/minggu"} replace />;
+}
+
+function PostLoginRedirect() {
+  return (
+    <HouseholdProvider>
+      <RoleRedirect />
     </HouseholdProvider>
   );
 }
@@ -133,9 +154,9 @@ export default function App() {
 
   return (
     <HashRouter>
-      <Routes>
-        <Route path="/login" element={session ? <Navigate to="/minggu" replace /> : <LoginPage />} />
-        <Route path="/masak/masuk" element={<CookLoginPage />} />
+      <ViewProvider>
+        <Routes>
+        <Route path="/masuk" element={session ? <PostLoginRedirect /> : <WhoLoginPage />} />
 
         {/* Cook — full-screen, outside the shell so nothing competes with the steps. */}
         <Route
@@ -154,14 +175,18 @@ export default function App() {
 
         <Route element={<PlannerGuard session={session} />}>
           <Route path="/onboard" element={<OnboardingPage />} />
-          <Route index element={<Navigate to="/minggu" replace />} />
           <Route path="/minggu" element={<WeekPage />} />
           <Route path="/koleksi" element={<LibraryPage />} />
           <Route path="/pengaturan" element={<SettingsPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/minggu" replace />} />
-      </Routes>
+        <Route
+          path="/"
+          element={session ? <PostLoginRedirect /> : <Navigate to="/masuk" replace />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ViewProvider>
     </HashRouter>
   );
 }

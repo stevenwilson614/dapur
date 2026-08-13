@@ -12,8 +12,9 @@ import {
   weekDays,
   weekStart,
 } from "@/lib/dates";
-import { SLOT_LABEL, SLOT_ORDER, SLOT_SHORT } from "@/lib/types";
+import { SLOT_LABEL_EN, SLOT_ORDER, SLOT_SHORT_EN } from "@/lib/types";
 import type { Meal, Slot } from "@/lib/types";
+import { mealHeading } from "@/lib/display";
 import Icon from "@/components/ui/Icon";
 import Sheet from "@/components/ui/Sheet";
 import Button from "@/components/ui/Button";
@@ -86,15 +87,15 @@ export default function WeekPage() {
     <div className="px-4 pb-8 pt-5">
       <header className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-[1.9rem] leading-none text-ink">Minggu ini</h1>
+          <h1 className="font-display text-[1.9rem] leading-none text-ink">This week</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {shortDate(days[0])} – {shortDate(days[6])}
+            {shortDate(days[0], "en")} – {shortDate(days[6], "en")}
           </p>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setStart(addDays(start, -7))}
-            aria-label="Minggu sebelumnya"
+            aria-label="Previous week"
             className="rounded-full p-2.5 text-ink-muted hover:bg-paper-sunk"
           >
             <Icon name="chevron-left" />
@@ -103,11 +104,11 @@ export default function WeekPage() {
             onClick={() => setStart(weekStart(today))}
             className="rounded-full px-3 py-2 text-sm text-ink-muted hover:bg-paper-sunk"
           >
-            Kini
+            Today
           </button>
           <button
             onClick={() => setStart(addDays(start, 7))}
-            aria-label="Minggu berikutnya"
+            aria-label="Next week"
             className="rounded-full p-2.5 text-ink-muted hover:bg-paper-sunk"
           >
             <Icon name="chevron-right" />
@@ -118,26 +119,26 @@ export default function WeekPage() {
       {pending && (
         <section className="mb-4 rounded-card border border-paper-border bg-paper-surface p-4 shadow-card">
           <p className="text-sm text-ink-muted">
-            {relativeDay(pending.date) ?? longDate(pending.date)} ·{" "}
-            {SLOT_LABEL[pending.slot].toLowerCase()}
+            {relativeDay(pending.date, "en") ?? longDate(pending.date, "en")} ·{" "}
+            {SLOT_LABEL_EN[pending.slot].toLowerCase()}
           </p>
           <p className="mt-1 font-display text-[1.25rem] leading-tight text-ink">
-            {pending.title || pending.recipes.map((r) => r.recipe.title_id).join(" + ")}
+            {mealHeading(pending)}
           </p>
-          <p className="mt-1 text-sm text-ink-muted">Disimpan ke koleksi?</p>
+          <p className="mt-1 text-sm text-ink-muted">Keep this in the library?</p>
           <div className="mt-3 flex gap-2">
             <Button onClick={() => rate(pending, "keep")} className="flex-1">
-              <Icon name="check" size={18} /> Simpan
+              <Icon name="check" size={18} /> Keep
             </Button>
             <Button variant="secondary" onClick={() => rate(pending, "no")} className="flex-1">
-              Tidak
+              No
             </Button>
           </div>
         </section>
       )}
 
       {busy && !meals.length ? (
-        <Spinner label="memuat minggu…" />
+        <Spinner label="loading week…" />
       ) : (
         <div className="space-y-3">
           {days.map((date) => {
@@ -157,12 +158,12 @@ export default function WeekPage() {
                       isToday ? "text-clay" : "text-ink"
                     }`}
                   >
-                    {dayShort(date)}
+                    {dayShort(date, "en")}
                   </h2>
                   <span className="text-sm text-ink-faint">{dayNumber(date)}</span>
                   {isToday && (
                     <span className="ml-auto text-[0.75rem] uppercase tracking-wide text-clay">
-                      hari ini
+                      today
                     </span>
                   )}
                 </div>
@@ -175,12 +176,10 @@ export default function WeekPage() {
                       className="flex w-full items-center gap-3 rounded-xl bg-paper-bg px-3 py-2.5 text-left transition hover:bg-paper-sunk"
                     >
                       <span className="w-[3.6rem] shrink-0 text-[0.78rem] uppercase tracking-wide text-ink-faint">
-                        {SLOT_SHORT[meal.slot]}
+                        {SLOT_SHORT_EN[meal.slot]}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-ink">
-                        {meal.title ||
-                          meal.recipes.map((r) => r.recipe.title_id).join(" + ") ||
-                          "Belum diisi"}
+                        {mealHeading(meal)}
                       </span>
                       {meal.status === "cooked" && (
                         <Icon name="check" size={16} className="shrink-0 text-leaf" />
@@ -192,7 +191,7 @@ export default function WeekPage() {
                     onClick={() => setSlotPicker(date)}
                     className="inline-flex items-center gap-1.5 px-1 py-1.5 text-sm text-ink-muted hover:text-clay"
                   >
-                    <Icon name="plus" size={16} /> Tambah
+                    <Icon name="plus" size={16} /> Add
                   </button>
                 </div>
               </section>
@@ -204,8 +203,8 @@ export default function WeekPage() {
       <Sheet
         open={!!slotPicker}
         onClose={() => setSlotPicker(null)}
-        title="Mau masak apa"
-        subtitle={slotPicker ? longDate(slotPicker) : undefined}
+        title="What are we cooking"
+        subtitle={slotPicker ? longDate(slotPicker, "en") : undefined}
       >
         <div className="space-y-2">
           {slots.map((slot) => (
@@ -214,7 +213,7 @@ export default function WeekPage() {
               onClick={() => slotPicker && addMeal(slotPicker, slot)}
               className="flex w-full items-center justify-between rounded-xl border border-paper-border bg-paper-surface px-4 py-3.5 text-left transition hover:border-clay"
             >
-              <span className="text-ink">{SLOT_LABEL[slot]}</span>
+              <span className="text-ink">{SLOT_LABEL_EN[slot]}</span>
               <Icon name="chevron-right" className="text-ink-faint" />
             </button>
           ))}

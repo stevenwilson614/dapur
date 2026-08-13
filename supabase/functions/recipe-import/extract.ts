@@ -28,10 +28,10 @@ export async function fetchPage(url: string): Promise<PageContent> {
   // works: copy the text and use Tempel.
   if (res.status === 403 || res.status === 401 || res.status === 429) {
     throw new Error(
-      "Situs ini memblokir akses otomatis. Salin teks resepnya lalu pakai tab “Tempel”.",
+      "This site blocks automatic access. Copy the recipe text and use the Paste tab.",
     );
   }
-  if (!res.ok) throw new Error(`Tidak bisa membuka halaman (${res.status})`);
+  if (!res.ok) throw new Error(`Couldn't open that page (${res.status})`);
 
   const html = await res.text();
   const heroImage = findOgImage(html);
