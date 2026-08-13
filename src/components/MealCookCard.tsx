@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/Icon";
 import { formatMinutes } from "@/lib/dates";
+import { mediaUrl } from "@/lib/media";
 import { SLOT_LABEL } from "@/lib/types";
 import type { Meal } from "@/lib/types";
 
@@ -50,9 +51,9 @@ export default function MealCookCard({ meal, preview, onToggleCooked }: Props) {
         {meal.recipes.map((mr) => {
           const body = (
             <>
-              {mr.recipe.hero_image_url ? (
+              {mediaUrl(mr.recipe.hero_image_url) ? (
                 <img
-                  src={mr.recipe.hero_image_url}
+                  src={mediaUrl(mr.recipe.hero_image_url)!}
                   alt=""
                   className="h-16 w-16 shrink-0 rounded-xl object-cover"
                 />

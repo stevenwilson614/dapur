@@ -15,6 +15,7 @@ import SettingsPage from "@/pages/SettingsPage";
 
 import TodayPage from "@/pages/cook/TodayPage";
 import ShoppingPage from "@/pages/cook/ShoppingPage";
+import CookLibraryPage from "@/pages/cook/CookLibraryPage";
 import CookModePage from "@/pages/cook/CookModePage";
 
 export function Spinner({ label = "just a moment…" }: { label?: string }) {
@@ -34,6 +35,7 @@ const PLANNER_NAV: { to: string; label: string; icon: IconName }[] = [
 const COOK_NAV: { to: string; label: string; icon: IconName }[] = [
   { to: "/masak", label: "Hari ini", icon: "pot" },
   { to: "/masak/belanja", label: "Belanja", icon: "cart" },
+  { to: "/masak/koleksi", label: "Resep", icon: "book" },
 ];
 
 function BottomNav({ items }: { items: typeof PLANNER_NAV }) {
@@ -167,10 +169,19 @@ export default function App() {
             </HouseholdProvider>
           }
         />
+        <Route
+          path="/masak/koleksi/:recipeId"
+          element={
+            <HouseholdProvider>
+              <CookModePage />
+            </HouseholdProvider>
+          }
+        />
 
         <Route element={<CookGuard session={session} />}>
           <Route path="/masak" element={<TodayPage />} />
           <Route path="/masak/belanja" element={<ShoppingPage />} />
+          <Route path="/masak/koleksi" element={<CookLibraryPage />} />
         </Route>
 
         <Route element={<PlannerGuard session={session} />}>

@@ -18,6 +18,8 @@ export interface PageContent {
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
+export const FETCH_UA = UA;
+
 export async function fetchPage(url: string): Promise<PageContent> {
   const res = await fetch(url, {
     headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml" },
@@ -34,13 +36,16 @@ export async function fetchPage(url: string): Promise<PageContent> {
   if (!res.ok) throw new Error(`Couldn't open that page (${res.status})`);
 
   const html = await res.text();
-  const heroImage = findOgImage(html);
-
   const recipe = findRecipeJsonLd(html);
+  const heroImage = resolveImageUrl(
+    findMetaImage(html) ?? (recipe ? firstImageFromRecipe(recipe) : null),
+    url,
+  );
+
   if (recipe) {
     return {
       text: JSON.stringify(recipe),
-      heroImage: heroImage ?? firstImageFromRecipe(recipe),
+      heroImage,
       fromJsonLd: true,
     };
   }
@@ -48,10 +53,26 @@ export async function fetchPage(url: string): Promise<PageContent> {
   return { text: stripToText(html), heroImage, fromJsonLd: false };
 }
 
-function findOgImage(html: string): string | null {
+/** Turn a possibly-relative or protocol-relative image URL into an absolute https URL. */
+export function resolveImageUrl(raw: string | null | undefined, pageUrl?: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    if (trimmed.startsWith("//")) return new URL(`https:${trimmed}`).toString();
+    if (pageUrl) return new URL(trimmed, pageUrl).toString();
+    return new URL(trimmed).toString();
+  } catch {
+    return null;
+  }
+}
+
+function findMetaImage(html: string): string | null {
   const patterns = [
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+property=["']og:image(?::secure_url|:url)?["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url|:url)?["']/i,
+    /<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image(?::src)?["']/i,
   ];
   for (const re of patterns) {
     const m = html.match(re);
@@ -109,12 +130,26 @@ function searchForRecipe(node: unknown, depth = 0): unknown | null {
 }
 
 function firstImageFromRecipe(recipe: unknown): string | null {
-  const image = (recipe as Record<string, unknown>)?.image;
+  const obj = recipe as Record<string, unknown> | null;
+  return imageUrlFromUnknown(obj?.image) ?? imageUrlFromUnknown(obj?.thumbnailUrl);
+}
+
+/** schema.org image can be a string, ImageObject, or an array of either. */
+function imageUrlFromUnknown(image: unknown): string | null {
+  if (!image) return null;
   if (typeof image === "string") return image;
-  if (Array.isArray(image) && typeof image[0] === "string") return image[0];
-  if (image && typeof image === "object") {
-    const url = (image as Record<string, unknown>).url;
-    if (typeof url === "string") return url;
+  if (Array.isArray(image)) {
+    for (const item of image) {
+      const url = imageUrlFromUnknown(item);
+      if (url) return url;
+    }
+    return null;
+  }
+  if (typeof image === "object") {
+    const obj = image as Record<string, unknown>;
+    if (typeof obj.url === "string") return obj.url;
+    if (typeof obj.contentUrl === "string") return obj.contentUrl;
+    return imageUrlFromUnknown(obj.url);
   }
   return null;
 }

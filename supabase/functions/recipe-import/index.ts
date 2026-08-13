@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@^2.49.4";
-import { fetchPage } from "./extract.ts";
+import { FETCH_UA, fetchPage, resolveImageUrl } from "./extract.ts";
 import { structureFromImage, structureFromText, type ImportedRecipe } from "./providers.ts";
 
 /**
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     // Store the hero image so the recipe survives the source rotting or
     // blocking hotlinks. Best effort — a missing photo is not a failed import.
-    const storedImage = heroImage ? await mirrorImage(heroImage) : null;
+    const storedImage = heroImage ? await mirrorImage(heroImage, sourceUrl) : null;
 
     return json({
       ...recipe,
@@ -117,13 +117,37 @@ function safeUrl(raw: string): string | null {
   }
 }
 
-async function mirrorImage(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (!res.ok) return null;
+function publicApiBase(): string {
+  return (
+    Deno.env.get("PUBLIC_API_URL") ||
+    Deno.env.get("SUPABASE_PUBLIC_URL") ||
+    ""
+  ).replace(/\/$/, "");
+}
 
-    const type = res.headers.get("content-type") ?? "image/jpeg";
-    if (!type.startsWith("image/")) return null;
+async function mirrorImage(rawUrl: string, pageUrl?: string | null): Promise<string | null> {
+  const url = resolveImageUrl(rawUrl, pageUrl ?? undefined);
+  if (!url) return null;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": FETCH_UA,
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        Referer: (pageUrl || new URL(url).origin) + "/",
+      },
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      console.error("mirrorImage fetch failed:", res.status, url);
+      return null;
+    }
+
+    const type = (res.headers.get("content-type") ?? "image/jpeg").split(";")[0].trim();
+    if (!type.startsWith("image/")) {
+      console.error("mirrorImage not an image:", type, url);
+      return null;
+    }
 
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (bytes.byteLength > MAX_IMAGE_BYTES) return null;
@@ -132,16 +156,27 @@ async function mirrorImage(url: string): Promise<string | null> {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    const ext = type.split("/")[1]?.split(";")[0] ?? "jpg";
+    const ext = (type.split("/")[1] ?? "jpg").replace("+xml", "") || "jpg";
     const path = `recipes/${crypto.randomUUID()}.${ext}`;
 
     const { error } = await admin.storage
       .from("kitchen")
       .upload(path, bytes, { contentType: type, upsert: false });
-    if (error) return null;
+    if (error) {
+      console.error("mirrorImage upload failed:", error.message);
+      return null;
+    }
 
-    return admin.storage.from("kitchen").getPublicUrl(path).data.publicUrl;
-  } catch {
+    const base = publicApiBase();
+    if (base) return `${base}/storage/v1/object/public/kitchen/${path}`;
+
+    // Last resort: rewrite the in-cluster host the JS client would otherwise emit.
+    return admin.storage
+      .from("kitchen")
+      .getPublicUrl(path)
+      .data.publicUrl.replace(/^https?:\/\/kong(?::\d+)?/, "https://api.larisid.com");
+  } catch (err) {
+    console.error("mirrorImage failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }

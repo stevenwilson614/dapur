@@ -122,6 +122,16 @@ export async function detachRecipe(linkId: string) {
 
 // -------------------------------------------------------------------- recipes
 
+export async function fetchRecipe(id: string): Promise<Recipe | null> {
+  const { data, error } = await supabase
+    .from("kitchen_recipes")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Recipe | null) ?? null;
+}
+
 export async function fetchRecipes(
   householdId: string,
   opts: { onlyKeepers?: boolean } = {}

@@ -4,7 +4,7 @@ Household meal planning for two roles: a planner (Olivia) and a cook (the
 household helper). Replaces sending recipes over WhatsApp.
 
 **Planner** (Olivia, English UI) plans the week, imports recipes, writes notes, rates what was good.
-**Cook** (Nias, Indonesian UI) sees what to cook today, what to buy, and how long it takes.
+**Cook** (Nias, Indonesian UI) sees what to cook today, what to buy, the full recipe book, and how long it takes.
 Olivia can flip to Nias’s view with the toggle at the top. Both open the same
 bookmarked page and just tap their name — no email, no password, no PIN.
 

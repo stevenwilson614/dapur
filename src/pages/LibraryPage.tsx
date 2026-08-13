@@ -5,6 +5,7 @@ import { formatMinutes, longDate, todayISO, weekDays, weekStart } from "@/lib/da
 import { SLOT_LABEL_EN, SLOT_ORDER } from "@/lib/types";
 import type { Recipe, Slot } from "@/lib/types";
 import { recipeTitle } from "@/lib/display";
+import { mediaUrl } from "@/lib/media";
 import Icon from "@/components/ui/Icon";
 import Sheet from "@/components/ui/Sheet";
 import Button from "@/components/ui/Button";
@@ -130,9 +131,9 @@ export default function LibraryPage() {
               key={recipe.id}
               className="flex gap-3 rounded-card border border-paper-border bg-paper-surface p-3 shadow-card"
             >
-              {recipe.hero_image_url ? (
+              {mediaUrl(recipe.hero_image_url) ? (
                 <img
-                  src={recipe.hero_image_url}
+                  src={mediaUrl(recipe.hero_image_url)!}
                   alt=""
                   className="h-20 w-20 shrink-0 rounded-xl object-cover"
                 />

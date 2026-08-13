@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { fetchMeal } from "@/lib/queries";
+import { fetchMeal, fetchRecipe } from "@/lib/queries";
 import { formatMinutes } from "@/lib/dates";
+import { mediaUrl } from "@/lib/media";
 import type { Meal, Recipe } from "@/lib/types";
 import Icon from "@/components/ui/Icon";
 import ViewToggle from "@/components/ViewToggle";
@@ -19,18 +20,40 @@ export default function CookModePage() {
   const [doneSteps, setDoneSteps] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
+  const backTo = mealId ? "/masak" : "/masak/koleksi";
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = mealId ? await fetchMeal(mealId) : null;
+        if (!recipeId) {
+          setError("Resep tidak ditemukan.");
+          return;
+        }
+        if (mealId) {
+          const data = await fetchMeal(mealId);
+          if (cancelled) return;
+          if (!data) {
+            setError("Resep tidak ditemukan.");
+            return;
+          }
+          const found = data.recipes.find((mr) => mr.recipe_id === recipeId)?.recipe ?? null;
+          if (!found) {
+            setError("Resep tidak ditemukan.");
+            return;
+          }
+          setMeal(data);
+          setRecipe(found);
+          return;
+        }
+        const data = await fetchRecipe(recipeId);
         if (cancelled) return;
         if (!data) {
           setError("Resep tidak ditemukan.");
           return;
         }
-        setMeal(data);
-        setRecipe(data.recipes.find((mr) => mr.recipe_id === recipeId)?.recipe ?? null);
+        setMeal(null);
+        setRecipe(data);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Gagal memuat");
       }
@@ -62,14 +85,16 @@ export default function CookModePage() {
       <div className="cook flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
         <ViewToggle />
         <p className="text-ink-muted">{error}</p>
-        <button onClick={() => navigate("/masak")} className="text-clay underline underline-offset-4">
+        <button onClick={() => navigate(backTo)} className="text-clay underline underline-offset-4">
           Kembali
         </button>
       </div>
     );
   }
 
-  if (!meal || !recipe) return <Spinner label="memuat resep…" />;
+  if (!recipe) return <Spinner label="memuat resep…" />;
+
+  const hero = mediaUrl(recipe.hero_image_url);
 
   const steps = recipe.steps ?? [];
 
@@ -87,7 +112,7 @@ export default function CookModePage() {
       <ViewToggle />
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-paper-border bg-paper-bg/95 px-3 py-3 backdrop-blur">
         <button
-          onClick={() => navigate("/masak")}
+          onClick={() => navigate(backTo)}
           className="flex min-h-[44px] items-center gap-1 rounded-full px-2 text-ink-muted"
         >
           <Icon name="chevron-left" size={22} />
@@ -96,12 +121,8 @@ export default function CookModePage() {
       </header>
 
       <div className="px-5 pt-5">
-        {recipe.hero_image_url && (
-          <img
-            src={recipe.hero_image_url}
-            alt=""
-            className="mb-4 h-48 w-full rounded-2xl object-cover"
-          />
+        {hero && (
+          <img src={hero} alt="" className="mb-4 h-48 w-full rounded-2xl object-cover" />
         )}
 
         <h1 className="font-display text-[2rem] leading-tight text-ink">{recipe.title_id}</h1>
@@ -111,9 +132,9 @@ export default function CookModePage() {
             .join(" · ")}
         </p>
 
-        {(meal.notes_today || recipe.standing_notes) && (
+        {(meal?.notes_today || recipe.standing_notes) && (
           <div className="mt-4 space-y-2">
-            {meal.notes_today && (
+            {meal?.notes_today && (
               <p className="rounded-xl bg-clay-soft px-4 py-3 leading-relaxed text-clay-deep">
                 {meal.notes_today}
               </p>

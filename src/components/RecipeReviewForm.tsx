@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import type { RecipeDraft } from "@/lib/recipeDraft";
+import { mediaUrl } from "@/lib/media";
 
 interface Props {
   draft: RecipeDraft;
@@ -37,9 +38,9 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
 
   return (
     <div className="space-y-5">
-      {draft.hero_image_url && (
+      {mediaUrl(draft.hero_image_url) && (
         <img
-          src={draft.hero_image_url}
+          src={mediaUrl(draft.hero_image_url)!}
           alt=""
           className="h-40 w-full rounded-2xl object-cover"
           onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}

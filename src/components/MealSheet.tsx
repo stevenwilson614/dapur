@@ -9,6 +9,7 @@ import { formatMinutes, longDate } from "@/lib/dates";
 import { SLOT_LABEL_EN } from "@/lib/types";
 import type { Meal, Recipe } from "@/lib/types";
 import { recipeTitle } from "@/lib/display";
+import { mediaUrl } from "@/lib/media";
 
 interface Props {
   meal: Meal;
@@ -158,9 +159,9 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
                   key={mr.id}
                   className="flex items-start gap-3 rounded-2xl border border-paper-border bg-paper-surface p-3"
                 >
-                  {mr.recipe.hero_image_url ? (
+                  {mediaUrl(mr.recipe.hero_image_url) ? (
                     <img
-                      src={mr.recipe.hero_image_url}
+                      src={mediaUrl(mr.recipe.hero_image_url)!}
                       alt=""
                       className="h-14 w-14 shrink-0 rounded-xl object-cover"
                     />
@@ -263,8 +264,8 @@ export default function MealSheet({ meal: initialMeal, open, onClose, onChanged 
                 onClick={() => addExisting(recipe)}
                 className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-paper-sunk"
               >
-                {recipe.hero_image_url ? (
-                  <img src={recipe.hero_image_url} alt="" className="h-11 w-11 rounded-lg object-cover" />
+                {mediaUrl(recipe.hero_image_url) ? (
+                  <img src={mediaUrl(recipe.hero_image_url)!} alt="" className="h-11 w-11 rounded-lg object-cover" />
                 ) : (
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-paper-sunk text-ink-faint">
                     <Icon name="pot" size={17} />
