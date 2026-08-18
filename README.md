@@ -14,11 +14,13 @@ A **Meal** is what gets planned and cooked. A **Recipe** is what gets imported,
 reused, and rated. They are different objects — which is why "mie ayam + sambal"
 is one meal with two recipes, and each recipe keeps its own library status.
 
-Two kinds of notes, deliberately separated:
+Three kinds of notes, deliberately separated:
 
 - **Standing notes** live on the recipe ("jangan pedas"). Written once, they
   resurface every single time it's cooked.
 - **Today notes** live on the meal ("ada tamu, buat 6 porsi"). One-off.
+- **Cook notes** live on a single ingredient or step. Nia taps + on that line
+  if she wants a clarification for next time. They persist on the recipe.
 
 ## Stack
 
@@ -47,9 +49,9 @@ for two people sharing one household — it is not multi-tenant-safe, and the
 GitHub Pages URL should not be treated as itself private.
 
 Once signed in, cooks get the ordinary RLS "is this user a member" check:
-they can read the household, mark meals cooked (via RPC), and manage the
-shopping list, but cannot create, edit, or delete recipes, meals, or
-verdicts. That part is unchanged from before.
+they can read the household, mark meals cooked (via RPC), leave cook notes on
+a recipe line (via RPC), and manage the shopping list, but cannot create,
+edit, or delete recipes, meals, or verdicts. That part is unchanged from before.
 
 To add or rename a profile button: set `login_key` (and `display_name`) on
 the relevant `kitchen_members` row, and add the key to the `PROFILES` list in

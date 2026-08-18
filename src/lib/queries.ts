@@ -165,6 +165,23 @@ export async function updateRecipe(id: string, patch: Partial<Recipe>) {
   if (error) throw error;
 }
 
+/** Cook (or planner) leaves a clarification on one ingredient or step. */
+export async function setCookNote(
+  recipeId: string,
+  kind: "ingredient" | "step",
+  index: number,
+  note: string | null
+): Promise<Recipe> {
+  const { data, error } = await supabase.rpc("kitchen_set_cook_note", {
+    p_recipe_id: recipeId,
+    p_kind: kind,
+    p_index: index,
+    p_note: note,
+  });
+  if (error) throw error;
+  return data as Recipe;
+}
+
 // ------------------------------------------------------------------- verdicts
 
 /**

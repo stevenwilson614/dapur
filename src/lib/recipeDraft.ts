@@ -12,6 +12,7 @@ export interface DraftIngredient {
   /** Indonesian name for the cook. Empty on a manual English-only entry. */
   name_id: string;
   note?: string;
+  cook_note?: string;
 }
 
 export interface RecipeDraft {
@@ -24,6 +25,8 @@ export interface RecipeDraft {
   stepsText: string;
   /** Indonesian steps for the cook. */
   stepsTextId: string;
+  /** Nia's clarifications, aligned with stepsTextId lines. */
+  stepCookNotes: string[];
   tags: string[];
   standing_notes: string;
   hero_image_url: string | null;
@@ -39,6 +42,7 @@ export function emptyDraft(): RecipeDraft {
     ingredients: [{ amount: "", name: "", name_id: "" }],
     stepsText: "",
     stepsTextId: "",
+    stepCookNotes: [],
     tags: [],
     standing_notes: "",
     hero_image_url: null,
@@ -57,9 +61,11 @@ export function draftFromImport(imported: ImportedRecipe): RecipeDraft {
       name: ing.item_en?.trim() || ing.item_id,
       name_id: ing.item_id,
       note: ing.note ?? undefined,
+      cook_note: ing.cook_note ?? undefined,
     })),
     stepsText: (imported.steps ?? []).map((s) => s.en?.trim() || s.id).join("\n"),
     stepsTextId: (imported.steps ?? []).map((s) => s.id).join("\n"),
+    stepCookNotes: (imported.steps ?? []).map((s) => s.cook_note ?? ""),
     tags: imported.tags ?? [],
     standing_notes: imported.notes ?? "",
     hero_image_url: imported.hero_image_url ?? null,
@@ -78,9 +84,11 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
       name: ing.item_en?.trim() || ing.item_id,
       name_id: ing.item_id,
       note: ing.note ?? undefined,
+      cook_note: ing.cook_note ?? undefined,
     })),
     stepsText: (recipe.steps ?? []).map((s) => s.en?.trim() || s.id).join("\n"),
     stepsTextId: (recipe.steps ?? []).map((s) => s.id).join("\n"),
+    stepCookNotes: (recipe.steps ?? []).map((s) => s.cook_note ?? ""),
     tags: recipe.tags ?? [],
     standing_notes: recipe.standing_notes ?? "",
     hero_image_url: recipe.hero_image_url,
@@ -113,6 +121,7 @@ export function draftToIngredients(draft: RecipeDraft): Ingredient[] {
         item_id,
         item_en,
         note: row.note?.trim() || null,
+        cook_note: row.cook_note?.trim() || null,
         norm_key: normalizeKey(item_id),
       };
     });
@@ -138,6 +147,7 @@ export function draftToSteps(draft: RecipeDraft): Step[] {
     steps.push({
       id: cook,
       en: en && en !== cook ? en : id ? null : en || null,
+      cook_note: draft.stepCookNotes[i]?.trim() || null,
     });
   }
   return steps;

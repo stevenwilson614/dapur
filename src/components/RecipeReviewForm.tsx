@@ -94,27 +94,32 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
         <label className={LABEL}>Ingredients</label>
         <div className="space-y-2">
           {draft.ingredients.map((row, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input
-                value={row.amount}
-                onChange={(e) => setIngredient(i, { amount: e.target.value })}
-                className={`${FIELD} w-24 shrink-0 text-center`}
-                placeholder="2 tbsp"
-              />
-              <input
-                value={row.name}
-                onChange={(e) => setIngredient(i, { name: e.target.value })}
-                className={FIELD}
-                placeholder="sweet soy sauce"
-              />
-              <button
-                type="button"
-                onClick={() => removeIngredient(i)}
-                aria-label="Remove ingredient"
-                className="shrink-0 rounded-full p-2 text-ink-faint hover:bg-paper-sunk hover:text-clay-deep"
-              >
-                <Icon name="x" size={18} />
-              </button>
+            <div key={i} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <input
+                  value={row.amount}
+                  onChange={(e) => setIngredient(i, { amount: e.target.value })}
+                  className={`${FIELD} w-24 shrink-0 text-center`}
+                  placeholder="2 tbsp"
+                />
+                <input
+                  value={row.name}
+                  onChange={(e) => setIngredient(i, { name: e.target.value })}
+                  className={FIELD}
+                  placeholder="sweet soy sauce"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(i)}
+                  aria-label="Remove ingredient"
+                  className="shrink-0 rounded-full p-2 text-ink-faint hover:bg-paper-sunk hover:text-clay-deep"
+                >
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+              {row.cook_note && (
+                <p className="px-1 text-[0.8rem] text-clay-deep">Nia: {row.cook_note}</p>
+              )}
             </div>
           ))}
         </div>
@@ -139,6 +144,17 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
         <p className="mt-1.5 text-[0.8rem] text-ink-muted">
           The cook still sees the Indonesian version from import.
         </p>
+        {draft.stepCookNotes.some((n) => n.trim()) && (
+          <ul className="mt-2 space-y-1">
+            {draft.stepCookNotes.map((n, i) =>
+              n.trim() ? (
+                <li key={i} className="text-[0.8rem] text-clay-deep">
+                  Nia, step {i + 1}: {n}
+                </li>
+              ) : null
+            )}
+          </ul>
+        )}
       </div>
 
       <div>

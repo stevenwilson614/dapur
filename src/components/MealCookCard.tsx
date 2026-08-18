@@ -69,6 +69,11 @@ export default function MealCookCard({ meal, preview, onToggleCooked }: Props) {
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
+                {mr.recipe.verdict === "no" && (
+                  <p className="mt-1.5 text-[0.88rem] leading-snug text-clay-deep">
+                    Sudah pernah dicoba — tidak suka
+                  </p>
+                )}
                 {mr.recipe.standing_notes && (
                   <p className="mt-1.5 text-[0.88rem] leading-snug text-ink-muted">
                     {mr.recipe.standing_notes}

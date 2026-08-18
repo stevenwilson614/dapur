@@ -43,6 +43,8 @@ export interface Ingredient {
   item_id: string;
   item_en?: string | null;
   note?: string | null;
+  /** Nia's clarification — persists for next time. */
+  cook_note?: string | null;
   /** Lowercased Indonesian name, used to group the shopping list. */
   norm_key: string;
 }
@@ -50,6 +52,8 @@ export interface Ingredient {
 export interface Step {
   id: string;
   en?: string | null;
+  /** Nia's clarification — persists for next time. */
+  cook_note?: string | null;
 }
 
 export interface Household {

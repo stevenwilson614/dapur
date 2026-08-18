@@ -6,6 +6,7 @@ import { formatMinutes } from "@/lib/dates";
 import { mediaUrl } from "@/lib/media";
 import type { Recipe } from "@/lib/types";
 import Icon from "@/components/ui/Icon";
+import AddRecipeSheet from "@/components/AddRecipeSheet";
 import { Spinner } from "@/App";
 
 /**
@@ -17,6 +18,7 @@ export default function CookLibraryPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(true);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     if (!household) return;
@@ -37,15 +39,22 @@ export default function CookLibraryPage() {
     };
   }, [household]);
 
-  const filtered = useMemo(() => {
+  const matchesSearch = (r: Recipe, q: string) =>
+    !q ||
+    r.title_id.toLowerCase().includes(q) ||
+    (r.title_en ?? "").toLowerCase().includes(q) ||
+    r.tags.some((t) => t.toLowerCase().includes(q));
+
+  const { keep, rejected } = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return recipes;
-    return recipes.filter(
-      (r) =>
-        r.title_id.toLowerCase().includes(q) ||
-        (r.title_en ?? "").toLowerCase().includes(q) ||
-        r.tags.some((t) => t.toLowerCase().includes(q))
-    );
+    const keep: Recipe[] = [];
+    const rejected: Recipe[] = [];
+    for (const r of recipes) {
+      if (!matchesSearch(r, q)) continue;
+      if (r.verdict === "no") rejected.push(r);
+      else keep.push(r);
+    }
+    return { keep, rejected };
   }, [recipes, search]);
 
   if (loading || !household) return <Spinner label="sebentar…" />;
@@ -53,10 +62,21 @@ export default function CookLibraryPage() {
   return (
     <div className="px-4 pb-8 pt-5">
       <header className="mb-4">
-        <h1 className="font-display text-[1.9rem] leading-none text-ink">Resep</h1>
-        <p className="mt-1 text-ink-muted">
-          {recipes.length ? `${recipes.length} resep` : "Belum ada resep"}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-display text-[1.9rem] leading-none text-ink">Resep</h1>
+            <p className="mt-1 text-ink-muted">
+              {recipes.length ? `${recipes.length} resep` : "Belum ada resep"}
+            </p>
+          </div>
+          <button
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-clay px-3.5 py-2 text-sm text-paper-surface"
+          >
+            <Icon name="plus" size={16} />
+            Tambah
+          </button>
+        </div>
       </header>
 
       <div className="mb-4 flex items-center gap-2 rounded-2xl border border-paper-border bg-paper-surface px-3">
@@ -71,38 +91,33 @@ export default function CookLibraryPage() {
 
       {busy && !recipes.length ? (
         <Spinner label="memuat resep…" />
-      ) : filtered.length ? (
-        <div className="space-y-3">
-          {filtered.map((recipe) => {
-            const hero = mediaUrl(recipe.hero_image_url);
-            return (
-              <Link
-                key={recipe.id}
-                to={`/masak/koleksi/${recipe.id}`}
-                className="flex gap-3 rounded-card border border-paper-border bg-paper-surface p-3 shadow-card active:bg-paper-sunk"
-              >
-                {hero ? (
-                  <img src={hero} alt="" className="h-24 w-24 shrink-0 rounded-xl object-cover" />
-                ) : (
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-paper-sunk text-ink-faint">
-                    <Icon name="pot" size={28} />
-                  </div>
-                )}
-                <div className="flex min-w-0 flex-1 flex-col justify-center">
-                  <h2 className="font-display text-[1.35rem] leading-snug text-ink">{recipe.title_id}</h2>
-                  <p className="mt-1 text-[0.95rem] text-ink-muted">
-                    {[
-                      formatMinutes(recipe.total_minutes),
-                      recipe.ingredients?.length ? `${recipe.ingredients.length} bahan` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
-                  </p>
-                </div>
-                <Icon name="chevron-right" className="shrink-0 self-center text-ink-faint" />
-              </Link>
-            );
-          })}
+      ) : keep.length || rejected.length ? (
+        <div className="space-y-6">
+          {keep.length ? (
+            <div className="space-y-3">
+              {keep.map((recipe) => (
+                <RecipeRow key={recipe.id} recipe={recipe} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-card border border-dashed border-paper-line px-4 py-10 text-center">
+              <p className="text-ink-muted">Tidak ada resep yang cocok.</p>
+            </div>
+          )}
+
+          {rejected.length > 0 && (
+            <section>
+              <h2 className="mb-2 font-display text-[1.2rem] text-clay-deep">Jangan masak lagi</h2>
+              <p className="mb-3 text-[0.9rem] text-ink-muted">
+                Resep yang sudah pernah dicoba dan tidak disukai.
+              </p>
+              <div className="space-y-3">
+                {rejected.map((recipe) => (
+                  <RecipeRow key={recipe.id} recipe={recipe} rejected />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       ) : (
         <div className="rounded-card border border-dashed border-paper-line px-4 py-16 text-center">
@@ -112,6 +127,51 @@ export default function CookLibraryPage() {
           </p>
         </div>
       )}
+
+      {household && (
+        <AddRecipeSheet
+          open={adding}
+          onClose={() => setAdding(false)}
+          householdId={household.id}
+          onSaved={(recipe) => setRecipes((prev) => [recipe, ...prev])}
+        />
+      )}
     </div>
+  );
+}
+
+function RecipeRow({ recipe, rejected }: { recipe: Recipe; rejected?: boolean }) {
+  const hero = mediaUrl(recipe.hero_image_url);
+  return (
+    <Link
+      to={`/masak/koleksi/${recipe.id}`}
+      className={`flex gap-3 rounded-card border bg-paper-surface p-3 shadow-card active:bg-paper-sunk ${
+        rejected ? "border-clay/30 opacity-80" : "border-paper-border"
+      }`}
+    >
+      {hero ? (
+        <img
+          src={hero}
+          alt=""
+          className={`h-24 w-24 shrink-0 rounded-xl object-cover ${rejected ? "grayscale-[40%]" : ""}`}
+        />
+      ) : (
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-paper-sunk text-ink-faint">
+          <Icon name="pot" size={28} />
+        </div>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <h2 className="font-display text-[1.35rem] leading-snug text-ink">{recipe.title_id}</h2>
+        <p className="mt-1 text-[0.95rem] text-ink-muted">
+          {[
+            formatMinutes(recipe.total_minutes),
+            recipe.ingredients?.length ? `${recipe.ingredients.length} bahan` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "—"}
+        </p>
+      </div>
+      <Icon name="chevron-right" className="shrink-0 self-center text-ink-faint" />
+    </Link>
   );
 }
