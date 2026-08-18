@@ -133,6 +133,7 @@ export default function CookLibraryPage() {
           open={adding}
           onClose={() => setAdding(false)}
           householdId={household.id}
+          forCook
           onSaved={(recipe) => setRecipes((prev) => [recipe, ...prev])}
         />
       )}

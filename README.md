@@ -49,9 +49,9 @@ for two people sharing one household — it is not multi-tenant-safe, and the
 GitHub Pages URL should not be treated as itself private.
 
 Once signed in, cooks get the ordinary RLS "is this user a member" check:
-they can read the household, mark meals cooked (via RPC), leave cook notes on
-a recipe line (via RPC), and manage the shopping list, but cannot create,
-edit, or delete recipes, meals, or verdicts. That part is unchanged from before.
+they can read the household, add recipes, mark meals cooked (via RPC), leave
+cook notes on a recipe line (via RPC), and manage the shopping list. They
+cannot edit or delete recipes, meals, or verdicts.
 
 To add or rename a profile button: set `login_key` (and `display_name`) on
 the relevant `kitchen_members` row, and add the key to the `PROFILES` list in

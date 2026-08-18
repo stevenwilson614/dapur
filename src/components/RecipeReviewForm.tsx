@@ -6,13 +6,14 @@ import { mediaUrl } from "@/lib/media";
 interface Props {
   draft: RecipeDraft;
   onChange: (draft: RecipeDraft) => void;
+  forCook?: boolean;
 }
 
 const FIELD =
   "w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-2.5 outline-none focus:border-clay";
 const LABEL = "mb-1.5 block text-[0.78rem] font-medium uppercase tracking-wide text-ink-muted";
 
-export default function RecipeReviewForm({ draft, onChange }: Props) {
+export default function RecipeReviewForm({ draft, onChange, forCook }: Props) {
   const [tagInput, setTagInput] = useState("");
 
   const set = (patch: Partial<RecipeDraft>) => onChange({ ...draft, ...patch });
@@ -36,6 +37,10 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
     setTagInput("");
   }
 
+  const titleValue = forCook ? draft.title_id : draft.title_en;
+  const titlePlaceholder = forCook ? draft.title_en || "Mie ayam" : draft.title_id || "Chicken noodle soup";
+  const stepsValue = forCook ? draft.stepsTextId || draft.stepsText : draft.stepsText;
+
   return (
     <div className="space-y-5">
       {mediaUrl(draft.hero_image_url) && (
@@ -48,28 +53,34 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
       )}
 
       <div>
-        <label className={LABEL}>Title</label>
+        <label className={LABEL}>{forCook ? "Judul" : "Title"}</label>
         <input
-          value={draft.title_en}
-          onChange={(e) => set({ title_en: e.target.value })}
+          value={titleValue}
+          onChange={(e) =>
+            forCook
+              ? set({ title_id: e.target.value })
+              : set({ title_en: e.target.value })
+          }
           className={`${FIELD} font-display text-lg`}
-          placeholder={draft.title_id || "Chicken noodle soup"}
+          placeholder={titlePlaceholder}
         />
       </div>
 
-      <div>
-        <label className={LABEL}>Indonesian title (cook)</label>
-        <input
-          value={draft.title_id}
-          onChange={(e) => set({ title_id: e.target.value })}
-          className={FIELD}
-          placeholder="Mie ayam"
-        />
-      </div>
+      {!forCook && (
+        <div>
+          <label className={LABEL}>Indonesian title (cook)</label>
+          <input
+            value={draft.title_id}
+            onChange={(e) => set({ title_id: e.target.value })}
+            className={FIELD}
+            placeholder="Mie ayam"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={LABEL}>Time (min)</label>
+          <label className={LABEL}>{forCook ? "Waktu (menit)" : "Time (min)"}</label>
           <input
             inputMode="numeric"
             value={draft.total_minutes}
@@ -79,7 +90,7 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
           />
         </div>
         <div>
-          <label className={LABEL}>Servings</label>
+          <label className={LABEL}>{forCook ? "Porsi" : "Servings"}</label>
           <input
             inputMode="numeric"
             value={draft.servings}
@@ -91,7 +102,7 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
       </div>
 
       <div>
-        <label className={LABEL}>Ingredients</label>
+        <label className={LABEL}>{forCook ? "Bahan" : "Ingredients"}</label>
         <div className="space-y-2">
           {draft.ingredients.map((row, i) => (
             <div key={i} className="space-y-1">
@@ -100,18 +111,25 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
                   value={row.amount}
                   onChange={(e) => setIngredient(i, { amount: e.target.value })}
                   className={`${FIELD} w-24 shrink-0 text-center`}
-                  placeholder="2 tbsp"
+                  placeholder={forCook ? "2 sdm" : "2 tbsp"}
                 />
                 <input
-                  value={row.name}
-                  onChange={(e) => setIngredient(i, { name: e.target.value })}
+                  value={forCook ? row.name_id || row.name : row.name}
+                  onChange={(e) =>
+                    setIngredient(
+                      i,
+                      forCook
+                        ? { name_id: e.target.value, name: e.target.value }
+                        : { name: e.target.value }
+                    )
+                  }
                   className={FIELD}
-                  placeholder="sweet soy sauce"
+                  placeholder={forCook ? "kecap manis" : "sweet soy sauce"}
                 />
                 <button
                   type="button"
                   onClick={() => removeIngredient(i)}
-                  aria-label="Remove ingredient"
+                  aria-label={forCook ? "Hapus bahan" : "Remove ingredient"}
                   className="shrink-0 rounded-full p-2 text-ink-faint hover:bg-paper-sunk hover:text-clay-deep"
                 >
                   <Icon name="x" size={18} />
@@ -128,22 +146,32 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
           onClick={addIngredient}
           className="mt-2 inline-flex items-center gap-1.5 text-sm text-clay"
         >
-          <Icon name="plus" size={16} /> Add ingredient
+          <Icon name="plus" size={16} /> {forCook ? "Tambah bahan" : "Add ingredient"}
         </button>
       </div>
 
       <div>
-        <label className={LABEL}>Steps — one per line</label>
+        <label className={LABEL}>{forCook ? "Cara masak — satu langkah per baris" : "Steps — one per line"}</label>
         <textarea
-          value={draft.stepsText}
-          onChange={(e) => set({ stepsText: e.target.value })}
+          value={stepsValue}
+          onChange={(e) =>
+            forCook
+              ? set({ stepsTextId: e.target.value, stepsText: e.target.value })
+              : set({ stepsText: e.target.value })
+          }
           rows={7}
           className={`${FIELD} leading-relaxed`}
-          placeholder={"Boil the noodles until cooked.\nSauté the garlic…"}
+          placeholder={
+            forCook
+              ? "Rebus mie sampai matang.\nTumis bawang putih…"
+              : "Boil the noodles until cooked.\nSauté the garlic…"
+          }
         />
-        <p className="mt-1.5 text-[0.8rem] text-ink-muted">
-          The cook still sees the Indonesian version from import.
-        </p>
+        {!forCook && (
+          <p className="mt-1.5 text-[0.8rem] text-ink-muted">
+            The cook still sees the Indonesian version from import.
+          </p>
+        )}
         {draft.stepCookNotes.some((n) => n.trim()) && (
           <ul className="mt-2 space-y-1">
             {draft.stepCookNotes.map((n, i) =>
@@ -158,21 +186,23 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
       </div>
 
       <div>
-        <label className={LABEL}>Standing notes</label>
+        <label className={LABEL}>{forCook ? "Catatan tetap" : "Standing notes"}</label>
         <textarea
           value={draft.standing_notes}
           onChange={(e) => set({ standing_notes: e.target.value })}
           rows={2}
           className={FIELD}
-          placeholder="Always half the chili"
+          placeholder={forCook ? "Jangan terlalu pedas" : "Always half the chili"}
         />
         <p className="mt-1.5 text-[0.8rem] text-ink-muted">
-          Shown every time this recipe is cooked.
+          {forCook
+            ? "Muncul setiap kali resep ini dimasak."
+            : "Shown every time this recipe is cooked."}
         </p>
       </div>
 
       <div>
-        <label className={LABEL}>Tags</label>
+        <label className={LABEL}>{forCook ? "Tag" : "Tags"}</label>
         <div className="mb-2 flex flex-wrap gap-1.5">
           {draft.tags.map((tag) => (
             <button
@@ -197,14 +227,14 @@ export default function RecipeReviewForm({ draft, onChange }: Props) {
               }
             }}
             className={FIELD}
-            placeholder="chicken, noodles, quick…"
+            placeholder={forCook ? "ayam, mie, cepat…" : "chicken, noodles, quick…"}
           />
           <button
             type="button"
             onClick={addTag}
             className="shrink-0 rounded-xl bg-paper-sunk px-4 text-sm text-ink"
           >
-            Add
+            {forCook ? "Tambah" : "Add"}
           </button>
         </div>
       </div>

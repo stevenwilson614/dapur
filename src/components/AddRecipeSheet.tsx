@@ -27,11 +27,13 @@ interface Props {
   open: boolean;
   onClose: () => void;
   householdId: string;
+  /** Cook-facing copy and fields (Indonesian). */
+  forCook?: boolean;
   /** When set, the sheet offers "add to this meal" as the primary action. */
   onSaved: (recipe: Recipe) => void;
 }
 
-export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: Props) {
+export default function AddRecipeSheet({ open, onClose, householdId, forCook, onSaved }: Props) {
   const [mode, setMode] = useState<Mode>("url");
   const [url, setUrl] = useState("");
   const [pasted, setPasted] = useState("");
@@ -97,7 +99,12 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
       onSaved(recipe);
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save");
+      const raw = err instanceof Error ? err.message : "";
+      setError(
+        forCook
+          ? raw || "Gagal menyimpan resep"
+          : raw || "Couldn't save"
+      );
     } finally {
       setBusy(false);
     }
@@ -107,17 +114,32 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
     <Sheet
       open={open}
       onClose={close}
-      title={stage === "review" ? "Check the recipe" : "New recipe"}
+      title={
+        stage === "review"
+          ? forCook
+            ? "Periksa resep"
+            : "Check the recipe"
+          : forCook
+            ? "Resep baru"
+            : "New recipe"
+      }
       subtitle={
         stage === "review"
-          ? "Translated for you and for the cook. Fix anything that's off."
+          ? forCook
+            ? "Perbaiki yang kurang tepat, lalu simpan."
+            : "Translated for you and for the cook. Fix anything that's off."
           : undefined
       }
       footer={
         stage === "review" ? (
-          <Button full onClick={save} disabled={busy}>
-            {busy ? "Saving…" : "Save recipe"}
-          </Button>
+          <div className="space-y-2">
+            {error && (
+              <p className="rounded-xl bg-clay-soft px-3 py-2 text-sm text-clay-deep">{error}</p>
+            )}
+            <Button type="button" full onClick={save} disabled={busy}>
+              {busy ? (forCook ? "Menyimpan…" : "Saving…") : forCook ? "Simpan resep" : "Save recipe"}
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -140,7 +162,9 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 }`}
               >
                 <Icon name={m.icon} size={19} />
-                {m.label}
+                {forCook
+                  ? { url: "Tautan", photo: "Foto", paste: "Tempel", manual: "Tulis" }[m.key]
+                  : m.label}
               </button>
             ))}
           </div>
@@ -155,7 +179,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 className="w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-3 outline-none focus:border-clay"
               />
               <Button full disabled={!url.trim()} onClick={() => runImport({ url: url.trim() })}>
-                Get recipe
+                {forCook ? "Ambil resep" : "Get recipe"}
               </Button>
               <p className="text-sm text-ink-muted">
                 From a food blog, Cookpad, or another recipe site.
@@ -167,7 +191,9 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
             <div className="space-y-3">
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-paper-line bg-paper-surface px-4 py-10 text-ink-muted">
                 <Icon name="camera" size={26} />
-                <span className="text-sm">Take a photo or pick from the gallery</span>
+                <span className="text-sm">
+                  {forCook ? "Ambil foto atau pilih dari galeri" : "Take a photo or pick from the gallery"}
+                </span>
                 <input
                   type="file"
                   accept="image/*"
@@ -190,7 +216,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 value={pasted}
                 onChange={(e) => setPasted(e.target.value)}
                 rows={9}
-                placeholder="Paste a WhatsApp recipe here…"
+                placeholder={forCook ? "Tempel resep dari WhatsApp di sini…" : "Paste a WhatsApp recipe here…"}
                 className="w-full rounded-xl border border-paper-border bg-paper-surface px-3 py-3 outline-none focus:border-clay"
               />
               <Button
@@ -198,14 +224,16 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                 disabled={!pasted.trim()}
                 onClick={() => runImport({ text: pasted.trim() })}
               >
-                Clean up recipe
+                {forCook ? "Rapikan resep" : "Clean up recipe"}
               </Button>
             </div>
           )}
 
           {mode === "manual" && (
             <div className="space-y-3">
-              <p className="text-sm text-ink-muted">Write it yourself from scratch.</p>
+              <p className="text-sm text-ink-muted">
+                {forCook ? "Tulis resepnya sendiri." : "Write it yourself from scratch."}
+              </p>
               <Button
                 full
                 onClick={() => {
@@ -213,7 +241,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
                   setStage("review");
                 }}
               >
-                Start writing
+                {forCook ? "Mulai tulis" : "Start writing"}
               </Button>
             </div>
           )}
@@ -225,7 +253,7 @@ export default function AddRecipeSheet({ open, onClose, householdId, onSaved }: 
           {error && (
             <p className="rounded-xl bg-clay-soft px-3 py-2 text-sm text-clay-deep">{error}</p>
           )}
-          <RecipeReviewForm draft={draft} onChange={setDraft} />
+          <RecipeReviewForm draft={draft} onChange={setDraft} forCook={forCook} />
         </div>
       )}
     </Sheet>

@@ -25,7 +25,7 @@ export default function Sheet({ open, onClose, title, subtitle, children, footer
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-[80] flex flex-col justify-end">
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative flex max-h-[90vh] flex-col rounded-t-[26px] bg-paper-surface shadow-lift">
         <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
